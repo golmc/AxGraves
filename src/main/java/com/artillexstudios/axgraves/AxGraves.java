@@ -2,6 +2,7 @@ package com.artillexstudios.axgraves;
 
 import com.artillexstudios.axapi.AxPlugin;
 import com.artillexstudios.axapi.config.Config;
+import com.artillexstudios.axapi.items.WrappedItemStack;
 import com.artillexstudios.axapi.libs.boostedyaml.dvs.versioning.BasicVersioning;
 import com.artillexstudios.axapi.libs.boostedyaml.settings.dumper.DumperSettings;
 import com.artillexstudios.axapi.libs.boostedyaml.settings.general.GeneralSettings;
@@ -19,9 +20,15 @@ import com.artillexstudios.axgraves.schedulers.SaveGraves;
 import com.artillexstudios.axgraves.schedulers.TickGraves;
 import com.artillexstudios.axgraves.utils.UpdateNotifier;
 import org.bstats.bukkit.Metrics;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import revxrsal.commands.bukkit.BukkitCommandHandler;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -32,6 +39,7 @@ public final class AxGraves extends AxPlugin {
     public static MessageUtils MESSAGEUTILS;
     public static ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
     private static AxMetrics metrics;
+    public static final List<WrappedItemStack> ITEMS = new ArrayList<>();
 
     public static AxPlugin getInstance() {
         return instance;
@@ -39,6 +47,7 @@ public final class AxGraves extends AxPlugin {
 
     public void enable() {
         instance = this;
+        createItems();
 
         new Metrics(this, 20332);
 
@@ -75,6 +84,7 @@ public final class AxGraves extends AxPlugin {
             if (!CONFIG.getBoolean("save-graves.enabled", true)) grave.remove();
             if (grave.getEntity() != null) grave.getEntity().remove();
             if (grave.getHologram() != null) grave.getHologram().remove();
+            if (grave.getItem() != null) grave.getItem().remove();
         }
 
         if (CONFIG.getBoolean("save-graves.enabled", true)) {
@@ -82,6 +92,29 @@ public final class AxGraves extends AxPlugin {
         }
 
         EXECUTOR.shutdownNow();
+    }
+    
+    private void createItems() {
+        ItemStack grave1 = new ItemStack(Material.STRUCTURE_BLOCK);
+        ItemStack grave2 = new ItemStack(Material.STRUCTURE_BLOCK);
+        ItemStack grave3 = new ItemStack(Material.STRUCTURE_BLOCK);
+        ItemStack grave4 = new ItemStack(Material.STRUCTURE_BLOCK);
+        ItemMeta meta1 = grave1.getItemMeta();
+        meta1.setItemModel(NamespacedKey.fromString("grave/gravestone"));
+        grave1.setItemMeta(meta1);
+        ItemMeta meta2 = grave2.getItemMeta();
+        meta2.setItemModel(NamespacedKey.fromString("grave/gravestone_old"));
+        grave2.setItemMeta(meta2);
+        ItemMeta meta3 = grave3.getItemMeta();
+        meta3.setItemModel(NamespacedKey.fromString("grave/gravestone_forgotten"));
+        grave3.setItemMeta(meta3);
+        ItemMeta meta4 = grave4.getItemMeta();
+        meta4.setItemModel(NamespacedKey.fromString("grave/gravestone_weathered"));
+        grave4.setItemMeta(meta4);
+        ITEMS.add(WrappedItemStack.wrap(grave1));
+        ITEMS.add(WrappedItemStack.wrap(grave2));
+        ITEMS.add(WrappedItemStack.wrap(grave3));
+        ITEMS.add(WrappedItemStack.wrap(grave4));
     }
 
     public void updateFlags() {

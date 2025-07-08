@@ -7,27 +7,21 @@ import com.artillexstudios.axapi.nms.NMSHandlers;
 import com.artillexstudios.axapi.packet.wrapper.serverbound.ServerboundInteractWrapper;
 import com.artillexstudios.axapi.packetentity.PacketEntity;
 import com.artillexstudios.axapi.packetentity.meta.entity.ArmorStandMeta;
+import com.artillexstudios.axapi.packetentity.meta.entity.ItemDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.serializers.Serializers;
 import com.artillexstudios.axapi.utils.EquipmentSlot;
 import com.artillexstudios.axapi.utils.StringUtils;
 import com.artillexstudios.axapi.utils.placeholder.Placeholder;
+import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
-import com.artillexstudios.axgraves.utils.BlacklistUtils;
-import com.artillexstudios.axgraves.utils.ExperienceUtils;
-import com.artillexstudios.axgraves.utils.InventoryUtils;
-import com.artillexstudios.axgraves.utils.LocationUtils;
-import com.artillexstudios.axgraves.utils.Utils;
+import com.artillexstudios.axgraves.utils.*;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ExperienceOrb;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -36,13 +30,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.Random;
 
-import static com.artillexstudios.axgraves.AxGraves.CONFIG;
-import static com.artillexstudios.axgraves.AxGraves.MESSAGES;
-import static com.artillexstudios.axgraves.AxGraves.MESSAGEUTILS;
+import static com.artillexstudios.axgraves.AxGraves.*;
 
 public class Grave {
+    private static final Random RANDOM = new Random();
     private static final Vector ZERO_VECTOR = new Vector(0, 0, 0);
     private final long spawned;
     private final Location location;
@@ -51,6 +44,7 @@ public class Grave {
     private final Inventory gui;
     private int storedXP;
     private final PacketEntity entity;
+    private final PacketEntity item;
     private final Hologram hologram;
     private boolean removed = false;
 
@@ -76,11 +70,11 @@ public class Grave {
 
         LocationUtils.clampLocation(location);
 
-        Player pl = offlinePlayer.getPlayer();
-        if (pl != null) {
-            items = InventoryUtils.reorderInventory(pl.getInventory(), items);
+        Player player = offlinePlayer.getPlayer();
+        if (player != null) {
+            items = InventoryUtils.reorderInventory(player.getInventory(), items);
             if (MESSAGES.getBoolean("death-message.enabled", false)) {
-                MESSAGEUTILS.sendLang(pl, "death-message.message", Map.of("%world%", location.getWorld().getName(), "%x%", "" + location.getBlockX(), "%y%", "" + location.getBlockY(), "%z%", "" + location.getBlockZ()));
+                MESSAGEUTILS.sendLang(player, "death-message.message");
             }
         }
         items.forEach(gui::addItem);
@@ -90,9 +84,17 @@ public class Grave {
         final ArmorStandMeta meta = (ArmorStandMeta) entity.meta();
         meta.small(true);
         meta.invisible(true);
-        meta.setNoBasePlate(false);
         entity.spawn();
 
+        Location directionlessLocation = this.location.clone().add(0, 1, 0);
+        directionlessLocation.setYaw(0);
+        directionlessLocation.setPitch(0);
+        
+        this.item = NMSHandlers.getNmsHandler().createEntity(EntityType.ITEM_DISPLAY, directionlessLocation);
+        final ItemDisplayMeta itemMeta = (ItemDisplayMeta) item.meta();
+        itemMeta.displayedItem(AxGraves.ITEMS.get(RANDOM.nextInt(0, AxGraves.ITEMS.size())));
+        item.spawn();
+        
         if (CONFIG.getBoolean("rotate-head-360", true)) {
             entity.location().setYaw(location.getYaw());
             entity.teleport(entity.location());
@@ -235,6 +237,7 @@ public class Grave {
 
             if (entity != null) entity.remove();
             if (hologram != null) hologram.remove();
+            if (item != null) item.remove();
         };
 
         if (Bukkit.isPrimaryThread()) runnable.run();
@@ -291,6 +294,10 @@ public class Grave {
 
     public Hologram getHologram() {
         return hologram;
+    }
+    
+    public PacketEntity getItem() {
+        return item;
     }
 
     public String getPlayerName() {

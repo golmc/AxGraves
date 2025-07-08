@@ -8,10 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-import static com.artillexstudios.axgraves.AxGraves.CONFIG;
-import static com.artillexstudios.axgraves.AxGraves.EXECUTOR;
-import static com.artillexstudios.axgraves.AxGraves.MESSAGES;
-import static com.artillexstudios.axgraves.AxGraves.MESSAGEUTILS;
+import static com.artillexstudios.axgraves.AxGraves.*;
 
 public enum SubCommandReload {
     INSTANCE;
