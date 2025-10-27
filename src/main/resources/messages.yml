@@ -5,9 +5,10 @@ hologram:
 
 help:
   - " "
-  - "&#FF00FF&lAxGraves &7» "
-  - " &7- &f/axgraves reload &7| &#FF00FFReload plugin"
-  - " &7- &f/axgraves list &7| &#FF00FFList spawned graves"
+  - "<gradient:#FF00FF:#DD00FF><b>AxGraves</b></gradient> <#FF55FF>Help"
+  - " <#FF55FF>➤ <white>/axgraves reload <#DDDDDD>| <#FFAAFF>Reload plugin"
+  - " <#FF55FF>➤ <white>/axgraves list <#DDDDDD>| <#FFAAFF>List spawned graves"
+  - " <#FF55FF>➤ <white>/axgraves tp <#DDDDDD>| <#FFAAFF>Teleport to last grave"
   - " "
 
 gui-name: "&0%player%'s Grave"
@@ -29,7 +30,7 @@ death-message:
 grave-list:
   header: "&#FF00FF&l=== GRAVES ==="
   grave: "&#FF00FF[TP] &#FFAAFF%player% &7- &#FFAAFF%world% %x%, %y%, %z% &7(%time%)"
-  no-graves: "&#FFAAFFThere are no graves!"
+  no-graves: "&#FFAAFFNo grave found!"
 
 update-notifier: "&#FF88FFThere is a new version of AxGraves available! &#DDDDDD(&#FFFFFFcurrent: &#FF0000%current% &#DDDDDD| &#FFFFFFlatest: &#00FF00%latest%&#DDDDDD)"
 

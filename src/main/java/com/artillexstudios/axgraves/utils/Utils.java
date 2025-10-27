@@ -13,7 +13,7 @@ public class Utils {
 
     @NotNull
     public static ItemStack getPlayerHead(@NotNull OfflinePlayer player) {
-        ItemBuilder builder = new ItemBuilder(Material.PLAYER_HEAD);
+        ItemBuilder builder = ItemBuilder.create(Material.PLAYER_HEAD);
 
         String texture = null;
         if (CONFIG.getBoolean("custom-grave-skull.enabled", false)) {

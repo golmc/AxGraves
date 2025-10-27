@@ -3,7 +3,7 @@
 
     <groupId>com.artillexstudios</groupId>
     <artifactId>AxGraves</artifactId>
-    <version>1.22.3</version>
+    <version>1.23.1</version>
     <packaging>jar</packaging>
 
     <name>AxGraves</name>
@@ -47,10 +47,6 @@
                                 <relocation>
                                     <pattern>org.bstats</pattern>
                                     <shadedPattern>com.artillexstudios.axgraves.libs.bstats</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>net.kyori</pattern>
-                                    <shadedPattern>com.artillexstudios.axgraves.libs.kyori</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>revxrsal.commands</pattern>
@@ -99,14 +95,14 @@
         <dependency>
             <groupId>com.artillexstudios.axapi</groupId>
             <artifactId>axapi</artifactId>
-            <version>1.4.732</version>
+            <version>1.4.803</version>
             <scope>compile</scope>
             <classifier>all</classifier>
         </dependency>
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit</artifactId>
-            <version>3.0.2</version>
+            <version>3.1.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

@@ -1,12 +1,17 @@
 package com.artillexstudios.axgraves.grave;
 
 import com.artillexstudios.axapi.hologram.Hologram;
-import com.artillexstudios.axapi.hologram.HologramLine;
+import com.artillexstudios.axapi.hologram.HologramType;
+import com.artillexstudios.axapi.hologram.HologramTypes;
+import com.artillexstudios.axapi.hologram.page.HologramPage;
 import com.artillexstudios.axapi.items.WrappedItemStack;
+import com.artillexstudios.axapi.libs.boostedyaml.block.implementation.Section;
 import com.artillexstudios.axapi.nms.NMSHandlers;
 import com.artillexstudios.axapi.packet.wrapper.serverbound.ServerboundInteractWrapper;
 import com.artillexstudios.axapi.packetentity.PacketEntity;
 import com.artillexstudios.axapi.packetentity.meta.entity.ArmorStandMeta;
+import com.artillexstudios.axapi.packetentity.meta.entity.DisplayMeta;
+import com.artillexstudios.axapi.packetentity.meta.entity.TextDisplayMeta;
 import com.artillexstudios.axapi.packetentity.meta.entity.ItemDisplayMeta;
 import com.artillexstudios.axapi.scheduler.Scheduler;
 import com.artillexstudios.axapi.serializers.Serializers;
@@ -16,12 +21,22 @@ import com.artillexstudios.axapi.utils.placeholder.Placeholder;
 import com.artillexstudios.axgraves.AxGraves;
 import com.artillexstudios.axgraves.api.events.GraveInteractEvent;
 import com.artillexstudios.axgraves.api.events.GraveOpenEvent;
-import com.artillexstudios.axgraves.utils.*;
+import com.artillexstudios.axgraves.utils.BlacklistUtils;
+import com.artillexstudios.axgraves.utils.ExperienceUtils;
+import com.artillexstudios.axgraves.utils.InventoryUtils;
+import com.artillexstudios.axgraves.utils.LocationUtils;
+import com.artillexstudios.axgraves.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.*;
+import org.bukkit.enchantments.EnchantmentTarget;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ExperienceOrb;
+import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -30,9 +45,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
-import static com.artillexstudios.axgraves.AxGraves.*;
+import static com.artillexstudios.axgraves.AxGraves.CONFIG;
+import static com.artillexstudios.axgraves.AxGraves.MESSAGES;
+import static com.artillexstudios.axgraves.AxGraves.MESSAGEUTILS;
 
 public class Grave {
     private static final Random RANDOM = new Random();
@@ -58,6 +76,7 @@ public class Grave {
         items.replaceAll(ItemStack::clone); // clone all items
 
         this.location = LocationUtils.getCenterOf(loc, true);
+        location.setPitch(0);
         this.player = offlinePlayer;
         this.playerName = offlinePlayer.getName() == null ? MESSAGES.getString("unknown-player", "???") : offlinePlayer.getName();
         this.storedXP = storedXP;
@@ -70,11 +89,11 @@ public class Grave {
 
         LocationUtils.clampLocation(location);
 
-        Player player = offlinePlayer.getPlayer();
-        if (player != null) {
-            items = InventoryUtils.reorderInventory(player.getInventory(), items);
+        Player pl = offlinePlayer.getPlayer();
+        if (pl != null) {
+            items = InventoryUtils.reorderInventory(pl.getInventory(), items);
             if (MESSAGES.getBoolean("death-message.enabled", false)) {
-                MESSAGEUTILS.sendLang(player, "death-message.message");
+                MESSAGEUTILS.sendLang(pl, "death-message.message", Map.of("%world%", location.getWorld().getName(), "%x%", "" + location.getBlockX(), "%y%", "" + location.getBlockY(), "%z%", "" + location.getBlockZ()));
             }
         }
         items.forEach(gui::addItem);
@@ -84,6 +103,7 @@ public class Grave {
         final ArmorStandMeta meta = (ArmorStandMeta) entity.meta();
         meta.small(true);
         meta.invisible(true);
+        meta.setNoBasePlate(false);
         entity.spawn();
 
         Location directionlessLocation = this.location.clone().add(0, 1, 0);
@@ -105,22 +125,6 @@ public class Grave {
 
         entity.onInteract(event -> Scheduler.get().run(task -> interact(event.getPlayer(), event.getHand())));
 
-        this.hologram = new Hologram(
-                location.clone().add(0, 1 + CONFIG.getFloat("hologram-height", 1.2f), 0),
-                Serializers.LOCATION.serialize(location),
-                0.3
-        );
-
-        int time = CONFIG.getInt("despawn-time-seconds", 180);
-        hologram.addPlaceholder(new Placeholder((player1, string) -> {
-            string = string.replace("%player%", playerName)
-                .replace("%xp%", "" + getStoredXP())
-                .replace("%item%", "" + countItems())
-                .replace("%despawn-time%", StringUtils.formatTime(time != -1 ? (time * 1_000L - (System.currentTimeMillis() - spawned)) : System.currentTimeMillis() - spawned));
-            return string;
-        }));
-
-        hologram.newPage();
         updateHologram();
     }
 
@@ -166,25 +170,25 @@ public class Grave {
                 if (it == null) continue;
 
                 if (CONFIG.getBoolean("auto-equip-armor", true)) {
-                    if (it.getType().toString().endsWith("_HELMET") && opener.getInventory().getHelmet() == null) {
+                    if ((EnchantmentTarget.ARMOR_HEAD.includes(it) || it.getType().equals(Material.TURTLE_HELMET)) && opener.getInventory().getHelmet() == null) {
                         opener.getInventory().setHelmet(it);
                         it.setAmount(0);
                         continue;
                     }
 
-                    if (it.getType().toString().endsWith("_CHESTPLATE") && opener.getInventory().getChestplate() == null) {
+                    if ((EnchantmentTarget.ARMOR_TORSO.includes(it) || it.getType().equals(Material.ELYTRA)) && opener.getInventory().getChestplate() == null) {
                         opener.getInventory().setChestplate(it);
                         it.setAmount(0);
                         continue;
                     }
 
-                    if (it.getType().toString().endsWith("_LEGGINGS") && opener.getInventory().getLeggings() == null) {
+                    if (EnchantmentTarget.ARMOR_LEGS.includes(it) && opener.getInventory().getLeggings() == null) {
                         opener.getInventory().setLeggings(it);
                         it.setAmount(0);
                         continue;
                     }
 
-                    if (it.getType().toString().endsWith("_BOOTS") && opener.getInventory().getBoots() == null) {
+                    if (EnchantmentTarget.ARMOR_FEET.includes(it) && opener.getInventory().getBoots() == null) {
                         opener.getInventory().setBoots(it);
                         it.setAmount(0);
                         continue;
@@ -212,10 +216,32 @@ public class Grave {
     }
 
     public void updateHologram() {
-        hologram.page(0).remove();
-        for (String line : StringUtils.formatListToString(MESSAGES.getStringList("hologram"))) {
-            hologram.addLine(line, HologramLine.Type.TEXT);
-        }
+        if (hologram != null) hologram.remove();
+
+        List<String> lines = MESSAGES.getStringList("hologram");
+
+        double hologramHeight = CONFIG.getFloat("hologram-height", 0.75f) + 1;
+        hologram = new Hologram(location.clone().add(0, getNewHeight(hologramHeight, lines.size(), 0.3f), 0));
+
+        HologramPage<String, HologramType<String>> page = hologram.createPage(HologramTypes.TEXT);
+        page.getParameters().withParameter(Grave.class, this);
+
+        Section section = CONFIG.getSection("holograms");
+        page.setEntityMetaHandler(m -> {
+            TextDisplayMeta meta = (TextDisplayMeta) m;
+            meta.seeThrough(section.getBoolean("see-through"));
+            meta.alignment(TextDisplayMeta.Alignment.valueOf(section.getString("alignment").toUpperCase()));
+            meta.backgroundColor(Integer.parseInt(section.getString("background-color"), 16));
+            meta.lineWidth(1000);
+            meta.billboardConstrain(DisplayMeta.BillboardConstrain.valueOf(section.getString("billboard").toUpperCase()));
+        });
+
+        page.setContent(String.join("<reset><br>", lines));
+        page.spawn();
+    }
+
+    private static double getNewHeight(double y, int lines, float lineHeight) {
+        return y - lineHeight * (lines - 1) + 0.25;
     }
 
     public int countItems() {
